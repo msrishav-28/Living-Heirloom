@@ -1,8 +1,8 @@
-# 🎯 Time Capsule - Preserve Your Voice for Tomorrow
+# 🎯 Living Heirloom - Preserve Your Legacy for Tomorrow
 
 > **Built for OpenAI GPT-OSS Hackathon** | Targeting 5 Prize Tracks Simultaneously
 
-An emotionally intelligent web application that helps people preserve their voices, stories, and wisdom for the future through AI-powered interviews and voice cloning technology.
+An emotionally intelligent web application that helps families preserve their voices, stories, and wisdom for future generations through AI-powered interviews and voice cloning technology.
 
 ## 🏆 Hackathon Strategy
 
@@ -22,7 +22,7 @@ An emotionally intelligent web application that helps people preserve their voic
 - Voices disappear, leaving only fading memories
 
 **Our Solution:**
-A privacy-first web app that conducts empathetic AI interviews, preserves actual voices through cloning, generates beautiful messages, and time-locks content for future delivery - all running entirely in your browser.
+A privacy-first web app that conducts empathetic AI interviews, preserves actual voices through cloning, generates beautiful heirloom messages, and time-locks content for future delivery - all running entirely in your browser.
 
 ## 🚀 Key Features
 
@@ -69,7 +69,7 @@ Quality:      Vitest + Coverage
 ```bash
 # 1. Clone and install
 git clone [repo-url]
-cd time-capsule-generator
+cd living-heirloom
 npm install
 
 # 2. Setup environment
@@ -169,7 +169,7 @@ npm run build
 
 > *"In a world of AI and automation, we built something to preserve what makes us human - our voices, our stories, and our love for each other across time."*
 
-**This is not just an app. It's a bridge between generations, a keeper of voices, and a guardian of human stories.**
+**This is not just an app. It's a bridge between generations, a keeper of family voices, and a guardian of precious family stories.**
 
 ## 📞 Links
 
@@ -177,4 +177,4 @@ npm run build
 - **Video Demo**: [3-minute showcase]
 - **Documentation**: [Full technical docs]
 
-Built with ❤️ for humanity's stories.
+Built with ❤️ for family stories and legacies.

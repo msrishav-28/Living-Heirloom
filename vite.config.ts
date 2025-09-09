@@ -29,9 +29,9 @@ export default defineConfig({
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Time Capsule - Preserve Your Voice',
-        short_name: 'Time Capsule',
-        description: 'An emotionally intelligent app for preserving voices and stories across time',
+        name: 'Living Heirloom - Preserve Your Legacy',
+        short_name: 'Living Heirloom',
+        description: 'An emotionally intelligent app for preserving family voices, stories, and wisdom across generations',
         theme_color: '#8B5CF6',
         background_color: '#FEFEFE',
         display: 'standalone',
@@ -60,7 +60,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['@mlc-ai/web-llm'],
-    include: ['dexie', 'zustand']
+    include: ['dexie', 'zustand', 'react', 'react-dom']
   },
   define: {
     global: 'globalThis',
@@ -70,14 +70,47 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          'ai': ['@mlc-ai/web-llm'],
+          // Core React libraries
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          
+          // UI libraries
+          'ui-radix': [
+            '@radix-ui/react-dialog', 
+            '@radix-ui/react-dropdown-menu', 
+            '@radix-ui/react-select',
+            '@radix-ui/react-progress',
+            '@radix-ui/react-slider'
+          ],
+          'ui-icons': ['lucide-react'],
+          
+          // Heavy AI libraries (separate chunk for lazy loading)
+          'ai-webllm': ['@mlc-ai/web-llm'],
+          
+          // Storage and state management
           'storage': ['dexie', 'zustand'],
-          'voice': ['comlink']
+          
+          // Voice and worker libraries
+          'voice': ['comlink'],
+          
+          // Utility libraries
+          'utils': ['clsx', 'tailwind-merge', 'zod', 'date-fns'],
+          
+          // Query and async libraries
+          'async': ['@tanstack/react-query']
         }
       }
-    }
+    },
+    // Optimize chunk size and compression
+    chunkSizeWarningLimit: 1000,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+    sourcemap: false, // Disable sourcemaps in production for smaller builds
   },
   server: {
     headers: {

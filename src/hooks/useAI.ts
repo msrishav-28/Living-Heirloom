@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { webLLMManager } from '@/lib/ai/webllm-manager';
+import { aiConfig } from '@/lib/config';
 import { useAppStore } from '@/stores/capsuleStore';
 import { db } from '@/lib/db/database';
 
@@ -85,7 +86,7 @@ export const useAI = (): UseAIReturn => {
     index: number
   ): Promise<string> => {
     if (!isReady || !isAIEnabled) {
-      throw new Error('AI not ready');
+      throw new Error('AI features are not available. Please ensure AI is enabled and initialized.');
     }
 
     try {
@@ -93,8 +94,13 @@ export const useAI = (): UseAIReturn => {
       const result = await webLLMManager.generateInterviewQuestion(responses, emotion, category, index);
       const responseTime = Date.now() - startTime;
       
+      // Validate result
+      if (!result || !result.content || typeof result.content !== 'string') {
+        throw new Error('AI generated invalid response');
+      }
+      
       // Track performance
-      await db.updateAIModelPerformance('webllm', { 
+      await db.updateAIModelPerformance(aiConfig.modelName, { 
         averageResponseTime: responseTime,
         successRate: 1 
       });
@@ -104,9 +110,15 @@ export const useAI = (): UseAIReturn => {
       console.error('Failed to generate question:', err);
       
       // Track failure
-      await db.updateAIModelPerformance('webllm', { successRate: 0 });
+      try {
+        await db.updateAIModelPerformance(aiConfig.modelName, { successRate: 0 });
+      } catch (dbErr) {
+        console.error('Failed to track AI performance:', dbErr);
+      }
       
-      throw err;
+      // Provide user-friendly error message
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate question with AI';
+      throw new Error(`AI Question Generation Error: ${errorMessage}`);
     }
   }, [isReady, isAIEnabled]);
 
@@ -116,7 +128,12 @@ export const useAI = (): UseAIReturn => {
     length: string = 'medium'
   ) => {
     if (!isReady || !isAIEnabled) {
-      throw new Error('AI not ready');
+      throw new Error('AI features are not available. Please ensure AI is enabled and initialized.');
+    }
+
+    // Validate inputs
+    if (!responses || Object.keys(responses).length === 0) {
+      throw new Error('No interview responses provided for content generation');
     }
 
     try {
@@ -124,8 +141,13 @@ export const useAI = (): UseAIReturn => {
       const result = await webLLMManager.generateTimeCapsuleContent(responses, tone, length);
       const responseTime = Date.now() - startTime;
       
+      // Validate result
+      if (!result || !result.content || typeof result.content !== 'string') {
+        throw new Error('AI generated invalid content');
+      }
+      
       // Track performance
-      await db.updateAIModelPerformance('webllm', { 
+      await db.updateAIModelPerformance(aiConfig.modelName, { 
         averageResponseTime: responseTime,
         successRate: 1 
       });
@@ -135,9 +157,15 @@ export const useAI = (): UseAIReturn => {
       console.error('Failed to generate content:', err);
       
       // Track failure
-      await db.updateAIModelPerformance('webllm', { successRate: 0 });
+      try {
+        await db.updateAIModelPerformance(aiConfig.modelName, { successRate: 0 });
+      } catch (dbErr) {
+        console.error('Failed to track AI performance:', dbErr);
+      }
       
-      throw err;
+      // Provide user-friendly error message
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate content with AI';
+      throw new Error(`AI Content Generation Error: ${errorMessage}`);
     }
   }, [isReady, isAIEnabled]);
 

@@ -8,7 +8,7 @@ import { VoiceCloneSetup } from '@/components/voice/VoiceCloneSetup';
 import { LLMLoadingProgress } from '@/components/ai/LLMLoadingProgress';
 import { useAppStore } from '@/stores/capsuleStore';
 import { useAI } from '@/hooks/useAI';
-import { QUESTION_TEMPLATES, EMOTIONAL_RESPONSES } from '@/lib/ai/prompts';
+
 
 interface Question {
   id: number;
@@ -27,6 +27,7 @@ const InterviewFlow = () => {
   const [displayedText, setDisplayedText] = useState('');
   const [emotionalState, setEmotionalState] = useState('reflective');
   const [aiQuestions, setAiQuestions] = useState<Record<number, string>>({});
+  const [validationError, setValidationError] = useState<string | null>(null);
   
   const { isVoiceEnabled, currentVoiceModel, isAIEnabled, isAIReady } = useAppStore();
   const { generateQuestion, analyzeEmotion, isLoading: isAILoading } = useAI();
@@ -102,34 +103,65 @@ const InterviewFlow = () => {
   }, [currentQuestion]);
 
   const handleNext = async () => {
-    if (currentAnswer.trim()) {
-      const newAnswers = { ...answers, [currentQuestion.id]: currentAnswer };
+    const trimmedAnswer = currentAnswer.trim();
+    
+    // Clear previous validation error
+    setValidationError(null);
+    
+    // Validation
+    if (!trimmedAnswer) {
+      setValidationError('Please share your thoughts before continuing.');
+      return;
+    }
+
+    if (trimmedAnswer.length < 10) {
+      setValidationError('Please share something more detailed (at least 10 characters).');
+      return;
+    }
+
+    if (trimmedAnswer.length > 2000) {
+      setValidationError('Your response is too long. Please keep it under 2000 characters.');
+      return;
+    }
+
+    try {
+      const newAnswers = { ...answers, [currentQuestion.id]: trimmedAnswer };
       setAnswers(newAnswers);
       
       // Analyze emotional state with AI if available
       try {
         if (isAIEnabled && isAIReady) {
-          const emotion = await analyzeEmotion(currentAnswer);
+          const emotion = await analyzeEmotion(trimmedAnswer);
           setEmotionalState(emotion);
         }
       } catch (error) {
         console.log('Using fallback emotional analysis');
+        // Continue without AI emotion analysis
       }
       
       setCurrentAnswer('');
+      setValidationError(null);
       
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
         
         // Generate next question with AI if available
         if (isAIEnabled && isAIReady) {
-          await generateAIQuestion(newAnswers);
+          try {
+            await generateAIQuestion(newAnswers);
+          } catch (error) {
+            console.log('Failed to generate AI question, using predefined questions');
+            // Continue with predefined questions
+          }
         }
       } else {
-        // Navigate to generation page with AI-enhanced content
+        // Navigate to generation page with collected responses
         console.log('All answers collected:', newAnswers);
         window.location.href = '/generate';
       }
+    } catch (error) {
+      console.error('Error processing interview response:', error);
+      setValidationError('Something went wrong. Please try again.');
     }
   };
 
@@ -236,7 +268,7 @@ const InterviewFlow = () => {
 
       <div className="max-w-4xl mx-auto pt-24">
         {/* Question Card */}
-        <Card className="card-sacred mb-8">
+        <Card className="card-sacred mb-8" role="main" aria-labelledby="current-question">
           <div className="flex items-start gap-6">
             {/* AI Avatar */}
             <div className={`w-16 h-16 bg-gradient-to-br ${getMoodColors(currentQuestion.mood)} rounded-2xl flex items-center justify-center flex-shrink-0`}>
@@ -249,12 +281,17 @@ const InterviewFlow = () => {
             {/* Question Content */}
             <div className="flex-1">
               <div className="mb-6">
-                <h2 className="text-2xl font-serif font-medium mb-4">
+                <h2 
+                  id="current-question"
+                  className="text-2xl font-serif font-medium mb-4"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
                   {displayedText}
-                  {isTyping && <span className="animate-pulse">|</span>}
+                  {isTyping && <span className="animate-pulse" aria-hidden="true">|</span>}
                 </h2>
                 {!isTyping && currentQuestion.followUp && (
-                  <p className="text-muted-foreground animate-fade-up">
+                  <p className="text-muted-foreground animate-fade-up" aria-live="polite">
                     {currentQuestion.followUp}
                   </p>
                 )}
@@ -262,15 +299,49 @@ const InterviewFlow = () => {
 
               {/* Response Area */}
               <div className="space-y-6">
-                <Textarea
-                  value={currentAnswer}
-                  onChange={(e) => setCurrentAnswer(e.target.value)}
-                  placeholder="Take your time... Share what feels right to you."
-                  className="min-h-32 text-lg resize-none border-2 focus:border-primary/50 rounded-xl"
-                  disabled={isTyping}
-                />
+                <div>
+                  <Textarea
+                    value={currentAnswer}
+                    onChange={(e) => {
+                      setCurrentAnswer(e.target.value);
+                      // Clear validation error when user starts typing
+                      if (validationError) {
+                        setValidationError(null);
+                      }
+                    }}
+                    placeholder="Take your time... Share what feels right to you."
+                    className={`min-h-32 text-lg resize-none border-2 rounded-xl transition-colors ${
+                      validationError 
+                        ? 'border-destructive focus:border-destructive' 
+                        : 'focus:border-primary/50'
+                    }`}
+                    disabled={isTyping}
+                    aria-label="Your response to the interview question"
+                    aria-describedby={validationError ? "response-error" : "response-help"}
+                    aria-invalid={validationError ? "true" : "false"}
+                  />
+                  
+                  {/* Character count */}
+                  <div className="flex justify-between items-center mt-2">
+                    <div>
+                      {validationError && (
+                        <p id="response-error" className="text-sm text-destructive" role="alert">
+                          {validationError}
+                        </p>
+                      )}
+                      {!validationError && (
+                        <p id="response-help" className="text-sm text-muted-foreground sr-only">
+                          Share your thoughts and feelings about this question. Take your time to express what feels meaningful to you.
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground" aria-label={`Character count: ${currentAnswer.length} of 2000`}>
+                      {currentAnswer.length}/2000 characters
+                    </p>
+                  </div>
+                </div>
 
-                {currentAnswer.trim() && (
+                {currentAnswer.trim() && !validationError && currentAnswer.length >= 10 && (
                   <div className="animate-fade-up">
                     <p className="text-sm text-muted-foreground mb-4">
                       Beautiful. Your words carry so much meaning.
@@ -285,9 +356,10 @@ const InterviewFlow = () => {
                       <Button 
                         variant="outline" 
                         onClick={handlePrevious}
-                        className="btn-gentle"
+                        className="btn-gentle focus:ring-2 focus:ring-primary"
+                        aria-label="Go back to previous question"
                       >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
                         Previous
                       </Button>
                     )}
@@ -295,7 +367,8 @@ const InterviewFlow = () => {
                     <Button 
                       variant="ghost" 
                       onClick={handleSkip}
-                      className="btn-ghost"
+                      className="btn-ghost focus:ring-2 focus:ring-primary"
+                      aria-label="Skip this question and continue to the next one"
                     >
                       Skip for now
                     </Button>
@@ -304,10 +377,11 @@ const InterviewFlow = () => {
                   <Button 
                     onClick={handleNext}
                     disabled={!currentAnswer.trim() || isTyping}
-                    className={`btn-hero group ${currentAnswer.trim() ? 'animate-pulse-soft' : ''}`}
+                    className={`btn-hero group focus:ring-2 focus:ring-primary focus:ring-offset-2 ${currentAnswer.trim() ? 'animate-pulse-soft' : ''}`}
+                    aria-label={currentQuestionIndex === questions.length - 1 ? 'Complete interview and create your heirloom' : 'Continue to next question'}
                   >
-                    {currentQuestionIndex === questions.length - 1 ? 'Create My Capsule' : 'Continue'}
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    {currentQuestionIndex === questions.length - 1 ? 'Create My Heirloom' : 'Continue'}
+                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                   </Button>
                 </div>
               </div>

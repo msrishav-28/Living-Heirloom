@@ -43,7 +43,10 @@ export const LLMLoadingProgress = ({ onComplete, className }: LLMLoadingProgress
           </h3>
           
           <p className="text-muted-foreground mb-6">
-            Preparing GPT-OSS for emotionally intelligent conversations...
+            {aiLoadingProgress.stage === 'downloading' && 'Downloading AI model for enhanced conversations...'}
+            {aiLoadingProgress.stage === 'loading' && 'Loading AI model into memory...'}
+            {aiLoadingProgress.stage === 'ready' && 'AI is ready for emotionally intelligent conversations!'}
+            {aiLoadingProgress.stage === 'error' && 'AI initialization encountered an issue.'}
           </p>
           
           <div className="space-y-4">
@@ -63,7 +66,10 @@ export const LLMLoadingProgress = ({ onComplete, className }: LLMLoadingProgress
             <div className="flex items-center gap-2 text-sm">
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-primary font-medium">
-                This happens once and enables AI-powered interviews
+                {aiLoadingProgress.stage === 'downloading' && 'Downloading AI model (this happens once)'}
+                {aiLoadingProgress.stage === 'loading' && 'Preparing AI for your conversations'}
+                {aiLoadingProgress.stage === 'ready' && 'AI-powered interviews are now available!'}
+                {aiLoadingProgress.stage === 'error' && 'You can still create heirlooms without AI features'}
               </span>
             </div>
           </div>

@@ -156,7 +156,7 @@ export const useAppStore = create<AppState>()(
       },
     }),
     {
-      name: 'time-capsule-app',
+      name: 'living-heirloom-app',
       partialize: (state) => ({
         currentVoiceModel: state.currentVoiceModel,
         isVoiceEnabled: state.isVoiceEnabled,

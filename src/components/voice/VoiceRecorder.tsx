@@ -22,11 +22,14 @@ export const VoiceRecorder = ({
     const [recordingTime, setRecordingTime] = useState(0);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const chunksRef = useRef<Blob[]>([]);
+    const streamRef = useRef<MediaStream | null>(null);
 
     useEffect(() => {
         return () => {
@@ -37,18 +40,33 @@ export const VoiceRecorder = ({
 
     const startRecording = async () => {
         try {
+            setError(null);
+            setIsProcessing(true);
+
+            // Check for microphone support
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Your browser does not support microphone access. Please use a modern browser like Chrome, Firefox, or Safari.');
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     sampleRate: 44100,
+                    channelCount: 1,
                 }
             });
 
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm;codecs=opus'
-            });
+            streamRef.current = stream;
 
+            // Check MediaRecorder support
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+                ? 'audio/webm;codecs=opus' 
+                : MediaRecorder.isTypeSupported('audio/webm') 
+                ? 'audio/webm' 
+                : 'audio/mp4';
+
+            const mediaRecorder = new MediaRecorder(stream, { mimeType });
             mediaRecorderRef.current = mediaRecorder;
             chunksRef.current = [];
 
@@ -59,25 +77,83 @@ export const VoiceRecorder = ({
             };
 
             mediaRecorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
+                setIsProcessing(true);
+                
+                const blob = new Blob(chunksRef.current, { type: mimeType });
+                
+                // Validate recording quality
+                if (blob.size < 1000) { // Less than 1KB is likely too short
+                    setError('Recording is too short. Please record for at least 3 seconds.');
+                    setIsProcessing(false);
+                    return;
+                }
+
+                if (blob.size > 10 * 1024 * 1024) { // More than 10MB is too large
+                    setError('Recording is too large. Please keep recordings under 2 minutes.');
+                    setIsProcessing(false);
+                    return;
+                }
+
                 setAudioBlob(blob);
+                
+                if (audioUrl) {
+                    URL.revokeObjectURL(audioUrl);
+                }
+                
                 const url = URL.createObjectURL(blob);
                 setAudioUrl(url);
+                setIsProcessing(false);
 
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
+                // Clean up stream
+                if (streamRef.current) {
+                    streamRef.current.getTracks().forEach(track => track.stop());
+                    streamRef.current = null;
+                }
             };
 
-            mediaRecorder.start();
+            mediaRecorder.onerror = (event) => {
+                console.error('MediaRecorder error:', event);
+                setError('Recording failed. Please try again.');
+                setIsProcessing(false);
+            };
+
+            mediaRecorder.start(100); // Collect data every 100ms
             setIsRecording(true);
             setRecordingTime(0);
+            setIsProcessing(false);
 
             timerRef.current = setInterval(() => {
-                setRecordingTime(prev => prev + 1);
+                setRecordingTime(prev => {
+                    const newTime = prev + 1;
+                    // Auto-stop after 2 minutes to prevent overly long recordings
+                    if (newTime >= 120) {
+                        stopRecording();
+                    }
+                    return newTime;
+                });
             }, 1000);
 
         } catch (error) {
             console.error('Error starting recording:', error);
+            
+            let errorMessage = 'Failed to start recording. ';
+            
+            if (error instanceof Error) {
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Please allow microphone access and try again.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No microphone found. Please connect a microphone and try again.';
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage += 'Your browser does not support audio recording.';
+                } else {
+                    errorMessage += error.message;
+                }
+            } else {
+                errorMessage += 'Please check your microphone and try again.';
+            }
+            
+            setError(errorMessage);
+            setIsProcessing(false);
         }
     };
 
@@ -118,6 +194,18 @@ export const VoiceRecorder = ({
 
     const confirmRecording = () => {
         if (audioBlob) {
+            // Final validation before confirming
+            if (recordingTime < 3) {
+                setError('Recording is too short. Please record for at least 3 seconds.');
+                return;
+            }
+            
+            if (recordingTime > 120) {
+                setError('Recording is too long. Please keep recordings under 2 minutes.');
+                return;
+            }
+            
+            setError(null);
             onRecordingComplete(audioBlob);
         }
     };
@@ -148,37 +236,53 @@ export const VoiceRecorder = ({
                 </p>
             </div>
 
+            {/* Error Display */}
+            {error && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 mb-4">
+                    <p className="text-sm text-destructive font-medium">{error}</p>
+                </div>
+            )}
+
             {/* Recording Controls */}
             <div className="space-y-4">
                 {!audioBlob ? (
                     <div className="text-center">
                         <Button
                             onClick={isRecording ? stopRecording : startRecording}
-                            className={`w-24 h-24 rounded-full ${isRecording
+                            disabled={isProcessing}
+                            className={`w-24 h-24 rounded-full focus:ring-4 focus:ring-primary focus:ring-offset-2 ${isRecording
                                 ? 'bg-destructive hover:bg-destructive/90 animate-pulse'
                                 : 'btn-hero'
-                                }`}
+                                } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-label={isRecording ? 'Stop recording your voice sample' : 'Start recording your voice sample'}
+                            aria-pressed={isRecording}
                         >
                             {isRecording ? (
-                                <MicOff className="w-8 h-8" />
+                                <MicOff className="w-8 h-8" aria-hidden="true" />
                             ) : (
-                                <Mic className="w-8 h-8" />
+                                <Mic className="w-8 h-8" aria-hidden="true" />
                             )}
                         </Button>
 
                         {isRecording && (
-                            <div className="mt-4">
-                                <p className="text-2xl font-mono font-medium text-accent">
+                            <div className="mt-4" role="status" aria-live="polite">
+                                <p className="text-2xl font-mono font-medium text-accent" aria-label={`Recording time: ${formatTime(recordingTime)}`}>
                                     {formatTime(recordingTime)}
                                 </p>
                                 <p className="text-sm text-muted-foreground">Recording...</p>
                             </div>
                         )}
 
-                        {!isRecording && recordingTime === 0 && (
+                        {!isRecording && recordingTime === 0 && !isProcessing && (
                             <p className="text-sm text-muted-foreground mt-4">
                                 Tap to start recording
                             </p>
+                        )}
+
+                        {isProcessing && (
+                            <div className="mt-4">
+                                <p className="text-sm text-muted-foreground">Processing...</p>
+                            </div>
                         )}
                     </div>
                 ) : (
@@ -236,7 +340,8 @@ export const VoiceRecorder = ({
             {/* Tips */}
             <div className="mt-6 p-4 bg-primary/5 rounded-xl">
                 <p className="text-sm text-muted-foreground">
-                    💡 <strong>Tips:</strong> Speak naturally, find a quiet space, and hold your device 6-8 inches away.
+                    💡 <strong>Tips:</strong> Speak naturally, find a quiet space, and hold your device 6-8 inches away. 
+                    Record for 5-30 seconds for best quality.
                 </p>
             </div>
         </Card>

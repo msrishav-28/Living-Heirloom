@@ -106,8 +106,8 @@ const CapsuleLibrary = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-serif font-light mb-2">Your Time Capsules</h1>
-          <p className="text-emotion">Precious moments preserved for tomorrow</p>
+          <h1 className="text-4xl font-serif font-light mb-2">Your Living Heirlooms</h1>
+          <p className="text-emotion">Precious family moments preserved for tomorrow</p>
         </div>
 
         {/* Controls */}
@@ -115,7 +115,7 @@ const CapsuleLibrary = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search your capsules..."
+              placeholder="Search your heirlooms..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -129,7 +129,7 @@ const CapsuleLibrary = () => {
             </Button>
             
             <Button className="btn-hero">
-              Create New Capsule
+              Create New Heirloom
             </Button>
           </div>
         </div>
@@ -141,7 +141,7 @@ const CapsuleLibrary = () => {
             className="cursor-pointer"
             onClick={() => setFilterType('all')}
           >
-            All Capsules
+            All Heirlooms
           </Badge>
           <Badge 
             variant={filterType === 'legacy' ? 'default' : 'secondary'}
@@ -284,12 +284,12 @@ const CapsuleLibrary = () => {
             <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-muted/30 to-muted/10 rounded-3xl flex items-center justify-center">
               <Calendar className="w-12 h-12 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-medium mb-2">No capsules found</h3>
+            <h3 className="text-xl font-medium mb-2">No heirlooms found</h3>
             <p className="text-muted-foreground mb-6">
-              {searchQuery ? 'Try adjusting your search terms' : 'Create your first time capsule to get started'}
+              {searchQuery ? 'Try adjusting your search terms' : 'Create your first living heirloom to get started'}
             </p>
             <Button className="btn-hero">
-              Create Your First Capsule
+              Create Your First Heirloom
             </Button>
           </div>
         )}

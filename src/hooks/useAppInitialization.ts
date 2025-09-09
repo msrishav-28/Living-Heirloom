@@ -20,11 +20,11 @@ export const useAppInitialization = () => {
     const initializeApp = async () => {
       try {
         // Generate a simple user ID for this session
-        const userId = localStorage.getItem('time-capsule-user-id') || 
+        const userId = localStorage.getItem('living-heirloom-user-id') || 
           `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        if (!localStorage.getItem('time-capsule-user-id')) {
-          localStorage.setItem('time-capsule-user-id', userId);
+        if (!localStorage.getItem('living-heirloom-user-id')) {
+          localStorage.setItem('living-heirloom-user-id', userId);
         }
 
         // Load or create user settings

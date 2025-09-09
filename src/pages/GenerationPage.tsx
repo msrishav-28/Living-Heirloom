@@ -186,7 +186,7 @@ Forever yours,
             </Button>
             <Button className="btn-hero">
               <Download className="w-4 h-4 mr-2" />
-              Save Capsule
+              Save Heirloom
             </Button>
           </div>
         </div>

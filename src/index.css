@@ -220,7 +220,7 @@
 }
 
 @layer components {
-  /* Button variants with emotional intelligence */
+  /* Button variants with emotional intelligence and accessibility */
   .btn-hero {
     @apply relative px-8 py-4 rounded-2xl font-medium transition-all duration-300;
     background: var(--gradient-primary);
@@ -230,6 +230,12 @@
 
   .btn-hero:hover {
     transform: translateY(-2px) scale(1.05);
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  .btn-hero:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
     box-shadow: var(--shadow-glow-primary);
   }
 
@@ -246,6 +252,12 @@
     box-shadow: var(--shadow-medium);
   }
 
+  .btn-gentle:focus-visible {
+    outline: 2px solid hsl(var(--secondary));
+    outline-offset: 2px;
+    background: hsl(var(--secondary) / 0.15);
+  }
+
   .btn-ghost {
     @apply px-6 py-3 rounded-xl font-light transition-all duration-300;
     color: hsl(var(--muted-foreground));
@@ -256,9 +268,20 @@
     color: hsl(var(--foreground));
   }
 
-  /* Card variants for different emotional states */
+  .btn-ghost:focus-visible {
+    outline: 2px solid hsl(var(--muted-foreground));
+    outline-offset: 2px;
+    background: hsl(var(--muted) / 0.2);
+  }
+
+  /* Card variants for different emotional states with accessibility */
   .card-memory {
     @apply glass rounded-2xl p-8 hover-lift;
+  }
+
+  .card-memory:focus-within {
+    outline: 2px solid hsl(var(--primary) / 0.5);
+    outline-offset: 2px;
   }
 
   .card-sacred {
@@ -266,9 +289,19 @@
     border: 2px solid hsl(var(--accent) / 0.3);
   }
 
+  .card-sacred:focus-within {
+    border-color: hsl(var(--accent) / 0.6);
+    box-shadow: 0 0 0 2px hsl(var(--accent) / 0.2);
+  }
+
   .card-preview {
     @apply glass rounded-xl p-6 hover-lift;
     border-left: 4px solid hsl(var(--primary));
+  }
+
+  .card-preview:focus-within {
+    outline: 2px solid hsl(var(--primary) / 0.5);
+    outline-offset: 2px;
   }
 }
 
@@ -310,4 +343,56 @@
   );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+/* Accessibility utilities */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --primary: 250 100% 40%;
+    --secondary: 220 100% 30%;
+    --accent: 30 100% 40%;
+    --border: 220 20% 60%;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-float,
+  .animate-pulse-soft,
+  .animate-fade-up {
+    animation: none !important;
+  }
 }

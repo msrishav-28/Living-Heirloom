@@ -80,7 +80,7 @@ const Index = () => {
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <div className="animate-fade-up">
             <h1 className="text-hero font-serif mb-8">
-              Preserve Your Voice
+              Preserve Your Legacy
               <br />
               <span className="text-accent">for Tomorrow</span>
             </h1>
@@ -88,14 +88,14 @@ const Index = () => {
           
           <div className="animate-fade-up animate-stagger-1">
             <p className="text-emotion max-w-3xl mx-auto mb-12">
-              Create beautiful time capsule messages that capture your thoughts, wisdom, and love. 
-              Our AI helps you craft meaningful messages that will touch hearts across time.
+              Create beautiful heirloom messages that capture your family's thoughts, wisdom, and love. 
+              Our AI helps you craft meaningful messages that will touch hearts across generations.
             </p>
           </div>
 
           <div className="animate-fade-up animate-stagger-2 flex flex-col sm:flex-row gap-6 justify-center">
             <Button size="lg" className="btn-hero group" onClick={() => window.location.href = '/create'}>
-              Start Your Time Capsule
+              Start Your Living Heirloom
               <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button variant="outline" size="lg" className="btn-gentle" onClick={() => window.location.href = '/capsules'}>
@@ -199,7 +199,7 @@ const Index = () => {
           </div>
           
           <Button size="lg" className="btn-hero" onClick={() => window.location.href = '/create'}>
-            Try Voice Cloning Now
+            Preserve Your Voice Now
             <ArrowRight className="ml-2" />
           </Button>
         </div>
@@ -258,10 +258,10 @@ const Index = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-serif font-light mb-6">
-              Choose Your <span className="text-secondary">Capsule Type</span>
+              Choose Your <span className="text-secondary">Heirloom Type</span>
             </h2>
             <p className="text-emotion max-w-2xl mx-auto">
-              Each type is specially designed for different kinds of meaningful moments.
+              Each type is specially designed for different kinds of meaningful family moments.
             </p>
           </div>
 
@@ -276,7 +276,7 @@ const Index = () => {
                   <h3 className="text-2xl font-serif font-medium mb-4 text-center">{type.title}</h3>
                   <p className="text-muted-foreground text-center leading-relaxed">{type.description}</p>
                   <Button className="w-full mt-8 btn-gentle" onClick={() => window.location.href = '/create'}>
-                    Create This Capsule
+                    Create This Heirloom
                   </Button>
                 </Card>
               );
@@ -296,7 +296,7 @@ const Index = () => {
               Don't let precious memories fade away. Create your first time capsule today and give the gift of your voice to tomorrow.
             </p>
             <Button size="lg" className="btn-hero group" onClick={() => window.location.href = '/create'}>
-              Begin Your Journey
+              Begin Your Legacy
               <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
             <p className="text-sm text-muted-foreground mt-6">

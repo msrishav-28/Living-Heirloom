@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { elevenLabsClient } from '@/lib/voice/elevenlabs-client';
 import { useAppStore } from '@/stores/capsuleStore';
 import { db } from '@/lib/db/database';
+import { voiceConfig } from '@/lib/config';
 
 export interface UseVoiceReturn {
   isRecording: boolean;
@@ -177,7 +178,42 @@ export const useVoice = (): UseVoiceReturn => {
     setIsProcessing(true);
     setError(null);
 
+    // Validate inputs
+    if (!name || name.trim().length === 0) {
+      const error = 'Voice name is required for cloning';
+      setError(error);
+      setIsProcessing(false);
+      throw new Error(error);
+    }
+
+    if (!samples || samples.length === 0) {
+      const error = 'Voice samples are required for cloning';
+      setError(error);
+      setIsProcessing(false);
+      throw new Error(error);
+    }
+
+    if (samples.length < voiceConfig.requiredSamples) {
+      const error = `At least ${voiceConfig.requiredSamples} voice samples are required for quality cloning`;
+      setError(error);
+      setIsProcessing(false);
+      throw new Error(error);
+    }
+
     try {
+      // Validate sample quality
+      for (let i = 0; i < samples.length; i++) {
+        if (samples[i].size === 0) {
+          throw new Error(`Voice sample ${i + 1} is empty or corrupted`);
+        }
+        if (samples[i].size < 1000) { // Less than 1KB is likely too short
+          throw new Error(`Voice sample ${i + 1} is too short for quality cloning`);
+        }
+        if (samples[i].size > voiceConfig.maxFileSize) {
+          throw new Error(`Voice sample ${i + 1} is too large (max ${Math.round(voiceConfig.maxFileSize / 1024 / 1024)}MB)`);
+        }
+      }
+
       // Convert blobs to files
       const audioFiles = samples.map((blob, index) => 
         new File([blob], `sample_${index}.wav`, { type: 'audio/wav' })
@@ -197,22 +233,27 @@ export const useVoice = (): UseVoiceReturn => {
       }
 
       // Save to database
-      await db.voiceModels.add({
-        modelId,
-        name,
-        samples: audioFiles.map(file => file.name),
-        sampleBlobs: samples,
-        createdAt: new Date(),
-        isActive: true,
-        isElevenLabsModel,
-        quality: isElevenLabsModel ? 'high' : 'medium'
-      });
+      try {
+        await db.voiceModels.add({
+          modelId,
+          name: name.trim(),
+          samples: audioFiles.map(file => file.name),
+          sampleBlobs: samples,
+          createdAt: new Date(),
+          isActive: true,
+          isElevenLabsModel,
+          quality: isElevenLabsModel ? 'high' : 'medium'
+        });
+      } catch (dbError) {
+        console.error('Failed to save voice model to database:', dbError);
+        throw new Error('Failed to save voice model. Please try again.');
+      }
 
       return modelId;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Voice cloning failed';
+      const errorMessage = err instanceof Error ? err.message : 'Voice cloning failed unexpectedly';
       setError(errorMessage);
-      throw err;
+      throw new Error(`Voice Cloning Error: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
@@ -222,29 +263,61 @@ export const useVoice = (): UseVoiceReturn => {
     setIsProcessing(true);
     setError(null);
 
+    // Validate input text
+    if (!text || text.trim().length === 0) {
+      const error = 'Text is required for speech generation';
+      setError(error);
+      setIsProcessing(false);
+      throw new Error(error);
+    }
+
+    if (text.length > 5000) {
+      const error = 'Text is too long for speech generation (max 5000 characters)';
+      setError(error);
+      setIsProcessing(false);
+      throw new Error(error);
+    }
+
     try {
       const targetVoiceId = voiceId || currentVoiceModel?.modelId;
       
       if (!targetVoiceId) {
-        throw new Error('No voice model available');
+        throw new Error('No voice model available for speech generation');
       }
 
-      // Check if it's an ElevenLabs model
+      // Get and validate voice model
       const voiceModel = await db.voiceModels.where('modelId').equals(targetVoiceId).first();
       
-      if (voiceModel?.isElevenLabsModel) {
+      if (!voiceModel) {
+        throw new Error('Voice model not found in database');
+      }
+
+      if (!voiceModel.isActive) {
+        throw new Error('Voice model is not active');
+      }
+      
+      if (voiceModel.isElevenLabsModel) {
         // Use ElevenLabs for generation
-        const audioBuffer = await elevenLabsClient.generateSpeech(text, targetVoiceId);
-        return new Blob([audioBuffer], { type: 'audio/mpeg' });
+        try {
+          const audioBuffer = await elevenLabsClient.generateSpeech(text.trim(), targetVoiceId);
+          
+          if (!audioBuffer || audioBuffer.byteLength === 0) {
+            throw new Error('ElevenLabs returned empty audio');
+          }
+          
+          return new Blob([audioBuffer], { type: 'audio/mpeg' });
+        } catch (elevenLabsError) {
+          console.error('ElevenLabs speech generation failed:', elevenLabsError);
+          throw new Error('Voice synthesis service is temporarily unavailable');
+        }
       } else {
-        // For local models, we'd need a local TTS implementation
-        // For now, throw an error indicating this feature needs implementation
-        throw new Error('Local voice synthesis not yet implemented');
+        // For local models, provide a helpful message
+        throw new Error('Local voice synthesis is not yet available. Please use ElevenLabs voice models for speech generation.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Speech generation failed';
+      const errorMessage = err instanceof Error ? err.message : 'Speech generation failed unexpectedly';
       setError(errorMessage);
-      throw err;
+      throw new Error(`Speech Generation Error: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
