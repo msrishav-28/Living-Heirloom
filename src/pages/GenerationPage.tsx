@@ -1,15 +1,22 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Download, Share2, RefreshCw, Wand2, Clock, Lock } from 'lucide-react';
+import { ArrowLeft, Download, Share2, RefreshCw, Wand2, Clock, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAI } from '@/hooks/useAI';
+import { useAppStore } from '@/stores/capsuleStore';
 
 const GenerationPage = () => {
   const [isGenerating, setIsGenerating] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState(0);
   const [toneAdjustment, setToneAdjustment] = useState([7]);
   const [lengthPreference, setLengthPreference] = useState('medium');
+  const [isUsingAI, setIsUsingAI] = useState(false);
+  const [aiGeneratedVersions, setAiGeneratedVersions] = useState<any[]>([]);
+  
+  const { currentCapsule, isVoiceEnabled, isAIEnabled, isAIReady } = useAppStore();
+  const { generateContent, isReady: aiReady } = useAI();
 
   // Simulated generated versions
   const generatedVersions = [
@@ -66,20 +73,70 @@ Forever yours,
     }
   ];
 
-  const currentVersion = generatedVersions[selectedVersion];
+  const currentVersion = isUsingAI && aiGeneratedVersions.length > 0 
+    ? aiGeneratedVersions[selectedVersion] || generatedVersions[selectedVersion]
+    : generatedVersions[selectedVersion];
 
   useEffect(() => {
-    // Simulate generation process
-    const timer = setTimeout(() => {
-      setIsGenerating(false);
-    }, 3000);
-
-    return () => clearTimeout(timer);
+    // Try to generate with AI first, fallback to simulated versions
+    generateWithAI();
   }, []);
 
+  const generateWithAI = async () => {
+    try {
+      setIsGenerating(true);
+      
+      // Check if AI is available and ready
+      if (!isAIEnabled || !isAIReady || !aiReady) {
+        console.log('AI not available, using predefined versions');
+        setTimeout(() => setIsGenerating(false), 2000);
+        return;
+      }
+      
+      // Get interview responses from current capsule or use mock data
+      const responses = currentCapsule?.metadata?.interviewResponses || {
+        "What's a moment from your life that still makes you smile?": "Sunday mornings with my family, making pancakes together",
+        "What wisdom would you share?": "Trust your heart, but let your mind guide you too",
+        "How do you want to be remembered?": "As someone who loved deeply and believed in others"
+      };
+
+      // Generate multiple versions with different tones
+      const tones = ['heartfelt', 'wise', 'poetic'];
+      const aiVersions = [];
+
+      for (const tone of tones) {
+        try {
+          const result = await generateContent(responses, tone, lengthPreference);
+          
+          aiVersions.push({
+            title: result.title,
+            tone: result.emotionalTone,
+            content: result.content
+          });
+        } catch (error) {
+          console.log(`Failed to generate ${tone} version, using fallback`);
+        }
+      }
+
+      if (aiVersions.length > 0) {
+        setAiGeneratedVersions(aiVersions);
+        setIsUsingAI(true);
+      }
+      
+    } catch (error) {
+      console.log('AI generation failed, using predefined versions');
+    } finally {
+      setTimeout(() => setIsGenerating(false), 2000);
+    }
+  };
+
   const handleRegenerate = () => {
-    setIsGenerating(true);
-    setTimeout(() => setIsGenerating(false), 2000);
+    if (isUsingAI) {
+      generateWithAI();
+    } else {
+      setIsGenerating(true);
+      setTimeout(() => setIsGenerating(false), 2000);
+    }
   };
 
   if (isGenerating) {

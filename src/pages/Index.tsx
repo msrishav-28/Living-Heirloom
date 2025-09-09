@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { ArrowRight, Clock, Heart, Lock, Sparkles, FileText, Users, Calendar } from 'lucide-react';
+import { ArrowRight, Clock, Heart, Lock, Sparkles, FileText, Users, Calendar, Volume2, Mic, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Navigation from '@/components/Navigation';
-import heroImage from '@/assets/hero-time-capsule.jpg';
+// Hero background will be handled with CSS gradients
 
 const Index = () => {
   const [activeFeature, setActiveFeature] = useState(0);
 
   const features = [
+    {
+      icon: Volume2,
+      title: "Voice Preservation",
+      description: "Clone your voice with just 3 recordings. Your voice will speak your messages forever."
+    },
     {
       icon: Heart,
       title: "Emotionally Intelligent",
@@ -17,7 +22,12 @@ const Index = () => {
     {
       icon: Lock,
       title: "Private & Secure",
-      description: "Your memories are encrypted and stored safely. Only you control who sees them and when."
+      description: "Everything runs in your browser. Your voice and memories never leave your device."
+    },
+    {
+      icon: Globe,
+      title: "Multilingual Magic",
+      description: "Your cloned voice can speak in 50+ languages while maintaining your unique tone."
     },
     {
       icon: Clock,
@@ -64,11 +74,8 @@ const Index = () => {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center px-6">
-        {/* Hero Background Image */}
-        <div 
-          className="absolute inset-0 opacity-20 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${heroImage})` }}
-        ></div>
+        {/* Hero Background */}
+        <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-primary/10 via-accent/5 to-secondary/10"></div>
         <div className="absolute inset-0 bg-gradient-to-br from-background/80 via-background/60 to-primary/10"></div>
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <div className="animate-fade-up">
@@ -131,7 +138,7 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
@@ -151,6 +158,50 @@ const Index = () => {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* Voice Demo Section */}
+      <section className="py-32 px-6 bg-gradient-to-br from-accent/5 to-secondary/5">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-serif font-light mb-6">
+            Your Voice, <span className="text-accent">Preserved Forever</span>
+          </h2>
+          <p className="text-emotion mb-12 max-w-2xl mx-auto">
+            With just three short recordings, we create a digital twin of your voice that can speak any message, 
+            in any language, with the same warmth and emotion as you.
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <Card className="card-memory text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-accent to-accent-glow rounded-2xl flex items-center justify-center">
+                <Mic className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Record 3 Samples</h3>
+              <p className="text-sm text-muted-foreground">Read three short sentences to capture your voice patterns</p>
+            </Card>
+            
+            <Card className="card-memory text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-primary to-primary-glow rounded-2xl flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">AI Voice Clone</h3>
+              <p className="text-sm text-muted-foreground">Advanced AI creates a perfect digital twin of your voice</p>
+            </Card>
+            
+            <Card className="card-memory text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-secondary to-secondary-glow rounded-2xl flex items-center justify-center">
+                <Volume2 className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Speak Forever</h3>
+              <p className="text-sm text-muted-foreground">Your voice can now speak any message you write</p>
+            </Card>
+          </div>
+          
+          <Button size="lg" className="btn-hero" onClick={() => window.location.href = '/create'}>
+            Try Voice Cloning Now
+            <ArrowRight className="ml-2" />
+          </Button>
         </div>
       </section>
 

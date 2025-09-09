@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, ArrowLeft, Clock, Sparkles, Heart, MessageCircle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Clock, Sparkles, Heart, MessageCircle, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { VoiceCloneSetup } from '@/components/voice/VoiceCloneSetup';
+import { LLMLoadingProgress } from '@/components/ai/LLMLoadingProgress';
+import { useAppStore } from '@/stores/capsuleStore';
+import { useAI } from '@/hooks/useAI';
+import { QUESTION_TEMPLATES, EMOTIONAL_RESPONSES } from '@/lib/ai/prompts';
 
 interface Question {
   id: number;
@@ -14,11 +19,17 @@ interface Question {
 }
 
 const InterviewFlow = () => {
+  const [showVoiceSetup, setShowVoiceSetup] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
+  const [emotionalState, setEmotionalState] = useState('reflective');
+  const [aiQuestions, setAiQuestions] = useState<Record<number, string>>({});
+  
+  const { isVoiceEnabled, currentVoiceModel, isAIEnabled, isAIReady } = useAppStore();
+  const { generateQuestion, analyzeEmotion, isLoading: isAILoading } = useAI();
 
   const questions: Question[] = [
     {
@@ -58,7 +69,14 @@ const InterviewFlow = () => {
     }
   ];
 
-  const currentQuestion = questions[currentQuestionIndex];
+  // Use AI-generated question if available, otherwise use predefined
+  const baseQuestion = questions[currentQuestionIndex];
+  const aiQuestion = aiQuestions[currentQuestionIndex];
+  const currentQuestion = {
+    ...baseQuestion,
+    text: aiQuestion || baseQuestion.text
+  };
+  
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   // Typewriter effect for questions
@@ -83,18 +101,57 @@ const InterviewFlow = () => {
     }
   }, [currentQuestion]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentAnswer.trim()) {
-      setAnswers(prev => ({ ...prev, [currentQuestion.id]: currentAnswer }));
+      const newAnswers = { ...answers, [currentQuestion.id]: currentAnswer };
+      setAnswers(newAnswers);
+      
+      // Analyze emotional state with AI if available
+      try {
+        if (isAIEnabled && isAIReady) {
+          const emotion = await analyzeEmotion(currentAnswer);
+          setEmotionalState(emotion);
+        }
+      } catch (error) {
+        console.log('Using fallback emotional analysis');
+      }
+      
       setCurrentAnswer('');
       
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
+        
+        // Generate next question with AI if available
+        if (isAIEnabled && isAIReady) {
+          await generateAIQuestion(newAnswers);
+        }
       } else {
-        // Navigate to generation page
-        console.log('All answers collected:', { ...answers, [currentQuestion.id]: currentAnswer });
-        // window.location.href = '/generate';
+        // Navigate to generation page with AI-enhanced content
+        console.log('All answers collected:', newAnswers);
+        window.location.href = '/generate';
       }
+    }
+  };
+
+  const generateAIQuestion = async (currentAnswers: Record<number, string>) => {
+    try {
+      const nextQuestionIndex = currentQuestionIndex + 1;
+      if (nextQuestionIndex < questions.length) {
+        const aiQuestion = await generateQuestion(
+          currentAnswers,
+          emotionalState,
+          questions[nextQuestionIndex]?.category || 'general',
+          nextQuestionIndex
+        );
+        
+        // Store AI-generated question
+        setAiQuestions(prev => ({
+          ...prev,
+          [nextQuestionIndex]: aiQuestion
+        }));
+      }
+    } catch (error) {
+      console.log('Using predefined questions as fallback');
     }
   };
 
@@ -133,13 +190,44 @@ const InterviewFlow = () => {
     }
   };
 
+  // Show voice setup first if not completed
+  if (showVoiceSetup && !isVoiceEnabled) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 py-8 px-6 flex items-center justify-center">
+        <VoiceCloneSetup onComplete={() => setShowVoiceSetup(false)} />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 py-8 px-6">
+    <>
+      <LLMLoadingProgress />
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 py-8 px-6">
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-4xl mx-auto py-4 px-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Question {currentQuestionIndex + 1} of {questions.length}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Question {currentQuestionIndex + 1} of {questions.length}</span>
+              {isVoiceEnabled && currentVoiceModel && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-accent/10 rounded-full">
+                  <Volume2 className="w-3 h-3 text-accent" />
+                  <span className="text-xs text-accent font-medium">{currentVoiceModel.name}</span>
+                </div>
+              )}
+              {isAIEnabled && isAIReady && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full">
+                  <Sparkles className="w-3 h-3 text-primary" />
+                  <span className="text-xs text-primary font-medium">AI Enhanced</span>
+                </div>
+              )}
+              {isAILoading && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-secondary/10 rounded-full">
+                  <div className="w-3 h-3 border border-secondary border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs text-secondary font-medium">AI Thinking...</span>
+                </div>
+              )}
+            </div>
             <span className="text-sm text-muted-foreground">{Math.round(progress)}% Complete</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -243,7 +331,8 @@ const InterviewFlow = () => {
           <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-xl animate-pulse-soft"></div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
